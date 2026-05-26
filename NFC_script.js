@@ -41,15 +41,7 @@ async function scanNFC() {
       }
     });
 
-  	window.addEventListener("keydown", (e) => {
-      if (!window.cablesPatch) return;
-
-      if (e.key >= "0" && e.key <= "9") {
-        const numberValue = Number(e.key);
-          window.cablesPatch.setVariable("nfcNumber", numberValue);
-          console.log("Test value sent to cables:", numberValue);
-    }
-});
+  	
     
   } catch (error) {
     console.error("NFC scan failed:", error);
@@ -57,5 +49,19 @@ async function scanNFC() {
 }
 
 document.addEventListener("click", () => {
+    scanNFC();
+}, { once: true });
+
+
+// temporary desktop test fallback
+window.addEventListener("keydown", (e) => {
+    if (!window.cablesPatch) return;
+
+    if (e.key >= "0" && e.key <= "9") {
+        const numberValue = Number(e.key);
+        window.cablesPatch.setVariable("nfcNumber", numberValue);
+        console.log("Test value sent to cables:", numberValue);
+    }
+});
   scanNFC();
 }, { once: true });
