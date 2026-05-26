@@ -1,45 +1,65 @@
 async function startNFC() {
-  if (!("NDEFReader" in window)) {
-    alert("Web NFC is not supported on this device/browser.");
-    return;
-  }
 
-  const ndef = new NDEFReader();
-
-  await ndef.scan();
-  console.log("NFC scan started");
-
-  ndef.onreading = (event) => {
-    for (const record of event.message.records) {
-      if (record.recordType === "text") {
-        const text = new TextDecoder(record.encoding).decode(record.data);
-        const number = parseInt(text.trim(), 10);
-
-        if (!Number.isNaN(number)) {
-          sendNfcNumberToCables(number);
-        }
-      }
+    if (!("NDEFReader" in window)) {
+        alert("Web NFC is not supported on this device/browser.");
+        return;
     }
-  };
+
+    const ndef = new NDEFReader();
+
+    try {
+
+        await ndef.scan();
+
+        console.log("NFC scanning started");
+
+        ndef.onreading = (event) => {
+
+            for (const record of event.message.records) {
+
+                if (record.recordType === "text") {
+
+                    const text = new TextDecoder(
+                        record.encoding
+                    ).decode(record.data);
+
+                    const number = parseInt(text.trim(), 10);
+
+                    if (!Number.isNaN(number)) {
+
+                        setNfcNumber(number);
+
+                    } else {
+
+                        console.warn(
+                            "NFC tag did not contain a valid number"
+                        );
+
+                    }
+                }
+            }
+        };
+
+    } catch (error) {
+
+        console.error("NFC error:", error);
+
+    }
 }
 
-function sendNfcNumberToCables(number) {
-  if (!window.CABLES || !CABLES.patch) {
-    console.warn("CABLES patch is not ready yet");
-    return;
-  }
+function setNfcNumber(number) {
 
-  const op = CABLES.patch.getOpById("ne0qr3urb");
+    if (!window.CABLES || !CABLES.patch) {
+        console.warn("CABLES patch not ready");
+        return;
+    }
 
-  if (!op) {
-    console.warn("Var Set node not found");
-    return;
-  }
+    // set cables variable
+    CABLES.patch.setVariable("nfcNumber", number);
 
-  op.getPort("Value").set(number);
-  op.getPort("Trigger").trigger();
-
-  console.log("NFC sent to cables:", number);
+    console.log("nfcNumber =", number);
 }
 
-document.getElementById("startNFC").addEventListener("click", startNFC);
+document
+    .getElementById("startNFC")
+    .addEventListener("click", startNFC);
