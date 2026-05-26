@@ -2,24 +2,33 @@
 <html lang="en">
 <head>
     <title>Mapping Manheim again</title>
+
     <style>
         body {
             margin: 0;
             background-color: #000;
             color: #fff;
             font-family: Helvetica, Arial, sans-serif;
-            overflow: hidden; /* disable scrolling / rubberband effect on mobile */
-            height:100vh;
+            overflow: hidden;
+            height: 100vh;
         }
 
         canvas {
             display: block;
             position: absolute;
-            outline:0;
+            outline: 0;
+        }
+
+        #startNFC {
+            position: fixed;
+            z-index: 10;
+            top: 16px;
+            left: 16px;
+            padding: 12px 16px;
+            font-size: 16px;
         }
 
         * {
-            /* disable on touch highlights of html elements, especially on mobile! */
             -webkit-tap-highlight-color: transparent;
             -webkit-touch-callout: none;
             -webkit-user-select: none;
@@ -27,7 +36,6 @@
             -ms-user-select: none;
             user-select: none;
         }
-
     </style>
 
     <meta charset="utf-8">
@@ -36,34 +44,30 @@
     <meta itemprop="description" content="made with cables">
     <meta itemprop="image" content="screenshot.png">
     <meta name="description" content="made with cables"/>
-
 </head>
+
 <body>
     <canvas id="glcanvas" width="100vw" height="100vh" tabindex="1"></canvas>
 
-    
+    <button id="startNFC">Start NFC</button>
+
     <script type="text/javascript" src="js/patch.js" async></script>
-    
+    <script type="text/javascript" src="js/nfc.js" defer></script>
 
     <script type="text/javascript">
-
-        function showError(initiator,...args)
-        {
+        function showError(initiator, ...args) {
             CABLES.logErrorConsole("[" + initiator + "]", ...args);
         }
 
-        function patchInitialized(patch)
-        {
-            // You can now access the patch object (patch), register variable watchers and so on
+        function patchInitialized(patch) {
+            // You can now access the patch object here
         }
 
-        function patchFinishedLoading(patch)
-        {
-            // The patch is ready now, all assets have been loaded
+        function patchFinishedLoading(patch) {
+            // The patch is ready now
         }
 
-        document.addEventListener("CABLES.jsLoaded", function (event)
-        {
+        document.addEventListener("CABLES.jsLoaded", function () {
             CABLES.patch = new CABLES.Patch({
                 patch: CABLES.exportedPatch,
                 "prefixAssetPath": "",
@@ -74,12 +78,13 @@
                 "onError": showError,
                 "onPatchLoaded": patchInitialized,
                 "onFinishedLoading": patchFinishedLoading,
-                "canvas": {"alpha":true, "premultipliedAlpha":true } // make canvas transparent
+                "canvas": { "alpha": true, "premultipliedAlpha": true }
             });
         });
 
-        // disable rubberband effect on mobile devices
-        document.getElementById('glcanvas').addEventListener('touchmove', (e)=>{ e.preventDefault(); }, false);
+        document.getElementById("glcanvas").addEventListener("touchmove", (e) => {
+            e.preventDefault();
+        }, false);
     </script>
 </body>
 </html>
