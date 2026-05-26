@@ -1,7 +1,6 @@
 let lastValue = null;
 
 async function scanNFC() {
-
     if (!("NDEFReader" in window)) {
         alert("Web NFC only works on Android Chrome.");
         return;
@@ -13,7 +12,6 @@ async function scanNFC() {
     }
 
     try {
-
         const ndef = new NDEFReader();
 
         await ndef.scan();
@@ -21,13 +19,8 @@ async function scanNFC() {
         console.log("NFC scanning started");
 
         ndef.addEventListener("reading", ({ message }) => {
-
-            console.log("NFC tag detected");
-
             for (const record of message.records) {
-
                 if (record.recordType === "text") {
-
                     const text = new TextDecoder(record.encoding)
                         .decode(record.data)
                         .trim();
@@ -35,31 +28,18 @@ async function scanNFC() {
                     const value = parseInt(text, 10);
 
                     if (!Number.isNaN(value)) {
+                        lastValue = value;
 
-                        // only update if value actually changed
-                        if (value !== lastValue) {
+                        window.cablesPatch.setVariable("nfcNumber", value);
 
-                            lastValue = value;
-
-                            window.cablesPatch.setVariable(
-                                "nfcNumber",
-                                value
-                            );
-
-                            console.log(
-                                "Stored NFC integer:",
-                                value
-                            );
-                        }
+                        console.log("Set #nfcNumber to:", value);
                     }
                 }
             }
         });
 
     } catch (err) {
-
         console.error("NFC error:", err);
-
     }
 }
 
