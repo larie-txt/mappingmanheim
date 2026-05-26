@@ -1,29 +1,40 @@
 let nfcIsScanning = false;
-let lastNfcValue = 0;
 let resetTimer = null;
 
-// Adjust this.
-// If the value resets too quickly while the tag is still touching,
-// increase this to 1500, 2000, or 3000.
 const RESET_AFTER_MS = 1200;
 
 function setCablesNfcNumber(value) {
+    console.log("Trying to set #nfcNumber to:", value);
+
     if (!window.cablesPatch) {
-        console.error("Cables patch not loaded yet.");
+        console.error("window.cablesPatch does not exist.");
         return;
     }
 
+    console.log("cablesPatch exists:", window.cablesPatch);
+
     window.cablesPatch.setVariable("nfcNumber", value);
-    console.log("Set #nfcNumber to:", value);
+
+    const variable = window.cablesPatch.getVar("nfcNumber");
+
+    if (variable) {
+        console.log(
+            "Cables variable #nfcNumber is now:",
+            variable.getValue()
+        );
+    } else {
+        console.error(
+            "Could not find cables variable named nfcNumber. Check spelling."
+        );
+    }
 }
 
 function scheduleResetToZero() {
     clearTimeout(resetTimer);
 
     resetTimer = setTimeout(() => {
-        lastNfcValue = 0;
         setCablesNfcNumber(0);
-        console.log("No NFC tag detected recently. Reset to 0.");
+        console.log("Reset #nfcNumber to 0 after timeout.");
     }, RESET_AFTER_MS);
 }
 
@@ -49,27 +60,36 @@ async function scanNFC() {
         await ndef.scan();
 
         nfcIsScanning = true;
+
         console.log("NFC scanning started");
 
         ndef.addEventListener("reading", ({ message }) => {
+            console.log("NFC reading event:", message);
+
             for (const record of message.records) {
-                if (record.recordType !== "text") continue;
+                console.log("NFC record:", record);
+
+                if (record.recordType !== "text") {
+                    console.warn("Skipping non-text NFC record:", record.recordType);
+                    continue;
+                }
 
                 const text = new TextDecoder(record.encoding)
                     .decode(record.data)
                     .trim();
 
+                console.log("Decoded NFC text:", text);
+
                 const value = parseInt(text, 10);
+
+                console.log("Parsed NFC value:", value);
 
                 if (Number.isNaN(value)) {
                     console.warn("NFC tag text is not a valid integer:", text);
                     return;
                 }
 
-                lastNfcValue = value;
                 setCablesNfcNumber(value);
-
-                // Reset only if no new tag read happens soon.
                 scheduleResetToZero();
             }
         });
