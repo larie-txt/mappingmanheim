@@ -59,7 +59,8 @@
 
         function patchFinishedLoading(patch)
         {
-            // The patch is ready now, all assets have been loaded
+    window.cablesPatch = patch;
+    patch.setVariable("nfcNumber", 0);
         }
 
         document.addEventListener("CABLES.jsLoaded", function (event)
