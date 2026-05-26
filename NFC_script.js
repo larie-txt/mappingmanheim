@@ -7,32 +7,39 @@ async function startNFC() {
   const ndef = new NDEFReader();
 
   await ndef.scan();
-
   console.log("NFC scan started");
 
   ndef.onreading = (event) => {
     for (const record of event.message.records) {
-
       if (record.recordType === "text") {
-
         const text = new TextDecoder(record.encoding).decode(record.data);
         const number = parseInt(text.trim(), 10);
 
         if (!Number.isNaN(number)) {
-
-          // set variable value
-          CABLES.patch.setVariable("nfcNumber", number);
-
-          // trigger your Var Set Trigger node
-          CABLES.patch.trigger("nfcTrigger");
-
-          console.log("nfcNumber =", number);
+          sendNfcNumberToCables(number);
         }
       }
     }
   };
 }
 
-document
-  .getElementById("startNFC")
-  .addEventListener("click", startNFC);
+function sendNfcNumberToCables(number) {
+  if (!window.CABLES || !CABLES.patch) {
+    console.warn("CABLES patch is not ready yet");
+    return;
+  }
+
+  const op = CABLES.patch.getOpById("ne0qr3urb");
+
+  if (!op) {
+    console.warn("Var Set node not found");
+    return;
+  }
+
+  op.getPort("Value").set(number);
+  op.getPort("Trigger").trigger();
+
+  console.log("NFC sent to cables:", number);
+}
+
+document.getElementById("startNFC").addEventListener("click", startNFC);
