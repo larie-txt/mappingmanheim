@@ -27,7 +27,7 @@ const firebaseConfig = {
         "YOUR_PROJECT.firebaseapp.com",
 
     databaseURL:
-        "https://YOUR_PROJECT-default-rtdb.europe-west1.firebasedatabase.app",
+        "https://mapping-manheim-a3212-default-rtdb.europe-west1.firebasedatabase.app/",
 
     projectId: "YOUR_PROJECT",
 
