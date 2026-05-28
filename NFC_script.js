@@ -7,6 +7,11 @@ import {
     onValue
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
+
+// =========================
+// FIREBASE CONFIG
+// =========================
+
 const firebaseConfig = {
     apiKey: "AIzaSyATQBWTDPYxseyReqaCUBwS0R0DXKkV5UU",
     authDomain: "mapping-manheim-a3212.firebaseapp.com",
@@ -21,110 +26,124 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const nfcRef = ref(db, "nfcNumber");
 
-let latestFirebaseValue = 0;
-let nfcIsScanning = false;
-let resetTimer = null;
 
-const RESET_AFTER_MS = 1200;
+// =========================
+// ORIGINAL NFC LOGIC
+// =========================
 
-function applyValueToCables(value) {
-    latestFirebaseValue = value;
-
-    if (!window.cablesPatch) {
-        console.warn("Cables patch not ready yet. Stored value:", value);
-        return;
-    }
-
-    window.cablesPatch.setVariable("nfcNumber", value);
-
-    console.log("Applied to cables #nfcNumber:", value);
-}
-
-// Listen on ALL devices
-onValue(nfcRef, (snapshot) => {
-    const value = snapshot.val() ?? 0;
-
-    console.log("Firebase received nfcNumber:", value);
-
-    applyValueToCables(value);
-});
-
-// Keep checking until cables is ready, then apply latest Firebase value
-const waitForCables = setInterval(() => {
-    if (window.cablesPatch) {
-        applyValueToCables(latestFirebaseValue);
-        clearInterval(waitForCables);
-        console.log("Cables patch connected to Firebase sync");
-    }
-}, 100);
-
-function sendNfcValue(value) {
-    console.log("Sending NFC value to Firebase:", value);
-    set(nfcRef, value)
-        .then(() => {
-            console.log("Firebase write successful:", value);
-        })
-        .catch((err) => {
-            console.error("Firebase write failed:", err);
-        });
-}
-
-function scheduleResetToZero() {
-    clearTimeout(resetTimer);
-
-    resetTimer = setTimeout(() => {
-        sendNfcValue(0);
-        console.log("Reset nfcNumber to 0");
-    }, RESET_AFTER_MS);
-}
-
-async function scanNFC() {
-    if (nfcIsScanning) {
-        console.log("NFC already scanning");
-        return;
-    }
+async function startNFC() {
 
     if (!("NDEFReader" in window)) {
-        alert("Web NFC only works on Android Chrome.");
+        alert("Web NFC is not supported on this device/browser.");
         return;
     }
 
+    const ndef = new NDEFReader();
+
     try {
-        const ndef = new NDEFReader();
 
         await ndef.scan();
 
-        nfcIsScanning = true;
-
         console.log("NFC scanning started");
 
-        ndef.addEventListener("reading", ({ message }) => {
-            for (const record of message.records) {
-                if (record.recordType !== "text") continue;
+        ndef.onreading = (event) => {
 
-                const text = new TextDecoder(record.encoding)
-                    .decode(record.data)
-                    .trim();
+            for (const record of event.message.records) {
 
-                console.log("NFC text:", text);
+                if (record.recordType === "text") {
 
-                const value = parseInt(text, 10);
+                    const text = new TextDecoder(
+                        record.encoding
+                    ).decode(record.data);
 
-                if (Number.isNaN(value)) {
-                    console.warn("Invalid NFC integer:", text);
-                    return;
+                    const number = parseInt(text.trim(), 10);
+
+                    if (!Number.isNaN(number)) {
+
+                        // local update on Android
+                        setNfcNumber(number);
+
+                        // synced update for iMac / other devices
+                        sendNfcNumberToFirebase(number);
+
+                    } else {
+
+                        console.warn(
+                            "NFC tag did not contain a valid number"
+                        );
+
+                    }
                 }
-
-                sendNfcValue(value);
-                scheduleResetToZero();
             }
-        });
+        };
 
-    } catch (err) {
-        console.error("NFC error:", err);
+    } catch (error) {
+
+        console.error("NFC error:", error);
+
     }
 }
 
+
+// =========================
+// LOCAL CABLES UPDATE
+// =========================
+
+function setNfcNumber(number) {
+
+    if (!window.CABLES || !CABLES.patch) {
+        console.warn("CABLES patch not ready");
+        return;
+    }
+
+    CABLES.patch.setVariable("nfcNumber", number);
+
+    console.log("Local nfcNumber =", number);
+}
+
+
+// =========================
+// FIREBASE WRITE
+// =========================
+
+function sendNfcNumberToFirebase(number) {
+
+    console.log("Sending nfcNumber to Firebase:", number);
+
+    set(nfcRef, number)
+        .then(() => {
+            console.log("Firebase nfcNumber sent:", number);
+        })
+        .catch((error) => {
+            console.error("Firebase write failed:", error);
+        });
+}
+
+
+// =========================
+// FIREBASE LISTENER
+// =========================
+
+// This runs on every device.
+// So when Android writes "1", the iMac receives "1".
+onValue(nfcRef, (snapshot) => {
+
+    const number = snapshot.val();
+
+    if (number === null || number === undefined) {
+        return;
+    }
+
+    console.log("Firebase received nfcNumber:", number);
+
+    setNfcNumber(number);
+});
+
+
+// =========================
+// START BUTTON
+// =========================
+
 document
     .getElementById("startNFC")
-    .addEventListener("click", scanNFC);
+    .addEventListener("click", startNFC);
