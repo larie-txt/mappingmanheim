@@ -1,65 +1,223 @@
-async function startNFC() {
+// =========================
+// FIREBASE IMPORTS
+// =========================
 
-    if (!("NDEFReader" in window)) {
-        alert("Web NFC is not supported on this device/browser.");
+import { initializeApp }
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+import {
+    getDatabase,
+    ref,
+    set,
+    onValue
+}
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+
+// =========================
+// FIREBASE CONFIG
+// =========================
+
+// Replace with YOUR Firebase config
+const firebaseConfig = {
+
+    apiKey: "YOUR_API_KEY",
+
+    authDomain:
+        "YOUR_PROJECT.firebaseapp.com",
+
+    databaseURL:
+        "https://YOUR_PROJECT-default-rtdb.europe-west1.firebasedatabase.app",
+
+    projectId: "YOUR_PROJECT",
+
+    storageBucket:
+        "YOUR_PROJECT.appspot.com",
+
+    messagingSenderId:
+        "YOUR_SENDER_ID",
+
+    appId:
+        "YOUR_APP_ID"
+};
+
+
+// =========================
+// FIREBASE INIT
+// =========================
+
+const app = initializeApp(firebaseConfig);
+
+const db = getDatabase(app);
+
+const nfcRef = ref(db, "nfcNumber");
+
+
+// =========================
+// SYNC TO CABLES
+// =========================
+
+// Every connected device listens here.
+// iMac updates automatically when Android scans.
+onValue(nfcRef, (snapshot) => {
+
+    const value = snapshot.val() ?? 0;
+
+    console.log("Firebase nfcNumber:", value);
+
+    if (window.cablesPatch) {
+
+        window.cablesPatch.setVariable(
+            "nfcNumber",
+            value
+        );
+
+        console.log(
+            "Updated cables variable:",
+            value
+        );
+    }
+});
+
+
+// =========================
+// SEND VALUE TO FIREBASE
+// =========================
+
+function sendNfcValue(value) {
+
+    console.log(
+        "Sending NFC value to Firebase:",
+        value
+    );
+
+    set(nfcRef, value);
+}
+
+
+// =========================
+// NFC SCANNING
+// =========================
+
+let nfcIsScanning = false;
+
+let resetTimer = null;
+
+// Adjust if reset is too fast
+const RESET_AFTER_MS = 1200;
+
+
+function scheduleResetToZero() {
+
+    clearTimeout(resetTimer);
+
+    resetTimer = setTimeout(() => {
+
+        sendNfcValue(0);
+
+        console.log(
+            "Reset nfcNumber to 0"
+        );
+
+    }, RESET_AFTER_MS);
+}
+
+
+async function scanNFC() {
+
+    if (nfcIsScanning) {
+
+        console.log(
+            "NFC already scanning"
+        );
+
         return;
     }
 
-    const ndef = new NDEFReader();
+    if (!("NDEFReader" in window)) {
+
+        alert(
+            "Web NFC only works on Android Chrome."
+        );
+
+        return;
+    }
 
     try {
 
+        const ndef = new NDEFReader();
+
         await ndef.scan();
 
-        console.log("NFC scanning started");
+        nfcIsScanning = true;
 
-        ndef.onreading = (event) => {
+        console.log(
+            "NFC scanning started"
+        );
 
-            for (const record of event.message.records) {
+        ndef.addEventListener(
+            "reading",
+            ({ message }) => {
 
-                if (record.recordType === "text") {
+                for (const record of message.records) {
 
-                    const text = new TextDecoder(
-                        record.encoding
-                    ).decode(record.data);
+                    if (
+                        record.recordType !== "text"
+                    ) continue;
 
-                    const number = parseInt(text.trim(), 10);
+                    const text =
+                        new TextDecoder(
+                            record.encoding
+                        )
+                        .decode(record.data)
+                        .trim();
 
-                    if (!Number.isNaN(number)) {
+                    console.log(
+                        "NFC text:",
+                        text
+                    );
 
-                        setNfcNumber(number);
+                    const value =
+                        parseInt(text, 10);
 
-                    } else {
+                    if (
+                        Number.isNaN(value)
+                    ) {
 
                         console.warn(
-                            "NFC tag did not contain a valid number"
+                            "Invalid NFC integer:",
+                            text
                         );
 
+                        return;
                     }
+
+                    // SEND TO ALL DEVICES
+                    sendNfcValue(value);
+
+                    // Reset later
+                    scheduleResetToZero();
                 }
             }
-        };
+        );
 
-    } catch (error) {
+    } catch (err) {
 
-        console.error("NFC error:", error);
-
+        console.error(
+            "NFC error:",
+            err
+        );
     }
 }
 
-function setNfcNumber(number) {
 
-    if (!window.CABLES || !CABLES.patch) {
-        console.warn("CABLES patch not ready");
-        return;
-    }
-
-    // set cables variable
-    CABLES.patch.setVariable("nfcNumber", number);
-
-    console.log("nfcNumber =", number);
-}
+// =========================
+// START NFC BUTTON
+// =========================
 
 document
     .getElementById("startNFC")
-    .addEventListener("click", startNFC);
+    .addEventListener(
+        "click",
+        scanNFC
+    );
