@@ -21,24 +21,24 @@ from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 // Replace with YOUR Firebase config
 const firebaseConfig = {
 
-    apiKey: "YOUR_API_KEY",
+    apiKey: "AIzaSyATQBWTDPYxseyReqaCUBwS0R0DXKkV5UU",
 
     authDomain:
-        "YOUR_PROJECT.firebaseapp.com",
+        "mapping-manheim-a3212.firebaseapp.com",
 
     databaseURL:
-        "https://mapping-manheim-a3212-default-rtdb.europe-west1.firebasedatabase.app/",
+        "https://mapping-manheim-a3212-default-rtdb.europe-west1.firebasedatabase.app",
 
-    projectId: "YOUR_PROJECT",
+    projectId: "mapping-manheim-a3212",
 
     storageBucket:
-        "YOUR_PROJECT.appspot.com",
+        "mapping-manheim-a3212.firebasestorage.app",
 
     messagingSenderId:
-        "YOUR_SENDER_ID",
+        "1040811677824",
 
     appId:
-        "YOUR_APP_ID"
+        "1:1040811677824:web:ada79a20f9b2cdc78cae65"
 };
 
 
