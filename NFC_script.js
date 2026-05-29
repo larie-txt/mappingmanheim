@@ -28,7 +28,19 @@ const nfcRef = ref(db, "nfcNumber");
 
 
 // =========================
-// ORIGINAL NFC LOGIC
+// TRANSITION STATE
+// =========================
+
+let currentNfc = 0;
+let targetNfc = 0;
+let isTransitioning = false;
+let queuedNfc = null;
+
+const FADE_DURATION = 1200; // milliseconds
+
+
+// =========================
+// NFC LOGIC
 // =========================
 
 async function startNFC() {
@@ -41,7 +53,6 @@ async function startNFC() {
     const ndef = new NDEFReader();
 
     try {
-
         await ndef.scan();
 
         console.log("NFC scanning started");
@@ -60,33 +71,24 @@ async function startNFC() {
 
                     if (!Number.isNaN(number)) {
 
-                        // local update on Android
                         setNfcNumber(number);
-
-                        // synced update for iMac / other devices
                         sendNfcNumberToFirebase(number);
 
                     } else {
-
-                        console.warn(
-                            "NFC tag did not contain a valid number"
-                        );
-
+                        console.warn("NFC tag did not contain a valid number");
                     }
                 }
             }
         };
 
     } catch (error) {
-
         console.error("NFC error:", error);
-
     }
 }
 
 
 // =========================
-// LOCAL CABLES UPDATE
+// LOCAL CABLES UPDATE WITH FADE
 // =========================
 
 function setNfcNumber(number) {
@@ -96,9 +98,62 @@ function setNfcNumber(number) {
         return;
     }
 
-    CABLES.patch.setVariable("nfcNumber", number);
+    if (number === currentNfc && !isTransitioning) {
+        return;
+    }
 
-    console.log("Local nfcNumber =", number);
+    if (isTransitioning) {
+        queuedNfc = number;
+        console.log("Queued NFC:", number);
+        return;
+    }
+
+    startNfcTransition(number);
+}
+
+
+function startNfcTransition(number) {
+
+    targetNfc = number;
+    isTransitioning = true;
+
+    CABLES.patch.setVariable("currentNfc", currentNfc);
+    CABLES.patch.setVariable("targetNfc", targetNfc);
+    CABLES.patch.setVariable("nfcFade", 0);
+
+    const startTime = performance.now();
+
+    function animate(now) {
+        const elapsed = now - startTime;
+        const t = Math.min(elapsed / FADE_DURATION, 1);
+
+        CABLES.patch.setVariable("nfcFade", t);
+
+        if (t < 1) {
+            requestAnimationFrame(animate);
+        } else {
+
+            currentNfc = targetNfc;
+
+            CABLES.patch.setVariable("currentNfc", currentNfc);
+            CABLES.patch.setVariable("targetNfc", currentNfc);
+            CABLES.patch.setVariable("nfcFade", 0);
+
+            isTransitioning = false;
+
+            console.log("Transition complete:", currentNfc);
+
+            if (queuedNfc !== null && queuedNfc !== currentNfc) {
+                const next = queuedNfc;
+                queuedNfc = null;
+                startNfcTransition(next);
+            } else {
+                queuedNfc = null;
+            }
+        }
+    }
+
+    requestAnimationFrame(animate);
 }
 
 
@@ -124,8 +179,6 @@ function sendNfcNumberToFirebase(number) {
 // FIREBASE LISTENER
 // =========================
 
-// This runs on every device.
-// So when Android writes "1", the iMac receives "1".
 onValue(nfcRef, (snapshot) => {
 
     const number = snapshot.val();
