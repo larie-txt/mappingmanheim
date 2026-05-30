@@ -168,7 +168,10 @@ function sendNFCNumberToFirebase(number) {
 // FIREBASE LISTENER
 // =========================
 
+let firstFirebaseValue = true;
+
 onValue(nfcRef, (snapshot) => {
+
     const number = snapshot.val();
 
     if (number === null || number === undefined) {
@@ -177,6 +180,25 @@ onValue(nfcRef, (snapshot) => {
 
     console.log("Firebase received nfcNumber:", number);
 
+    // First load: initialize directly
+    if (firstFirebaseValue) {
+
+        firstFirebaseValue = false;
+
+        currentNFC = number;
+        targetNFC = number;
+
+        if (window.CABLES && CABLES.patch) {
+            CABLES.patch.setVariable("currentNFC", number);
+            CABLES.patch.setVariable("targetNFC", number);
+            CABLES.patch.setVariable("fadeNFC", 0);
+        }
+
+        console.log("Initial NFC state:", number);
+        return;
+    }
+
+    // Later updates fade normally
     setNFCNumber(number);
 });
 
