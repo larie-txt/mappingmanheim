@@ -32,7 +32,7 @@ const nfcRef = ref(db, "nfcNumber");
 // =========================
 
 let currentNfc = 0;
-let targetNfc = 0;
+let targetNfc = 1;
 let isTransitioning = false;
 let queuedNfc = null;
 
