@@ -31,12 +31,12 @@ const nfcRef = ref(db, "nfcNumber");
 // TRANSITION STATE
 // =========================
 
-let currentNfc = 0;
-let targetNfc = 0;
+let currentNFC = 0;
+let targetNFC = 0;
 let isTransitioning = false;
-let queuedNfc = null;
+let queuedNFC = null;
 
-const FADE_DURATION = 1200; // milliseconds
+const FADE_DURATION = 1200;
 
 
 // =========================
@@ -44,7 +44,6 @@ const FADE_DURATION = 1200; // milliseconds
 // =========================
 
 async function startNFC() {
-
     if (!("NDEFReader" in window)) {
         alert("Web NFC is not supported on this device/browser.");
         return;
@@ -57,23 +56,17 @@ async function startNFC() {
 
         console.log("NFC scanning started");
 
+        document.getElementById("startNFC")?.remove();
+
         ndef.onreading = (event) => {
-
             for (const record of event.message.records) {
-
                 if (record.recordType === "text") {
-
-                    const text = new TextDecoder(
-                        record.encoding
-                    ).decode(record.data);
-
+                    const text = new TextDecoder(record.encoding).decode(record.data);
                     const number = parseInt(text.trim(), 10);
 
                     if (!Number.isNaN(number)) {
-
-                        setNfcNumber(number);
-                        sendNfcNumberToFirebase(number);
-
+                        setNFCNumber(number);
+                        sendNFCNumberToFirebase(number);
                     } else {
                         console.warn("NFC tag did not contain a valid number");
                     }
@@ -91,64 +84,61 @@ async function startNFC() {
 // LOCAL CABLES UPDATE WITH FADE
 // =========================
 
-function setNfcNumber(number) {
-
+function setNFCNumber(number) {
     if (!window.CABLES || !CABLES.patch) {
         console.warn("CABLES patch not ready");
         return;
     }
 
-    if (number === currentNfc && !isTransitioning) {
+    if (number === currentNFC && !isTransitioning) {
         return;
     }
 
     if (isTransitioning) {
-        queuedNfc = number;
+        queuedNFC = number;
         console.log("Queued NFC:", number);
         return;
     }
 
-    startNfcTransition(number);
+    startNFCTransition(number);
 }
 
 
-function startNfcTransition(number) {
-
-    targetNfc = number;
+function startNFCTransition(number) {
+    targetNFC = number;
     isTransitioning = true;
 
-    CABLES.patch.setVariable("currentNfc", currentNfc);
-    CABLES.patch.setVariable("targetNfc", targetNfc);
-    CABLES.patch.setVariable("nfcFade", 0);
+    CABLES.patch.setVariable("currentNFC", currentNFC);
+    CABLES.patch.setVariable("targetNFC", targetNFC);
+    CABLES.patch.setVariable("fadeNFC", 0);
 
     const startTime = performance.now();
 
     function animate(now) {
         const elapsed = now - startTime;
-        const t = Math.min(elapsed / FADE_DURATION, 1);
+        const fade = Math.min(elapsed / FADE_DURATION, 1);
 
-        CABLES.patch.setVariable("nfcFade", t);
+        CABLES.patch.setVariable("fadeNFC", fade);
 
-        if (t < 1) {
+        if (fade < 1) {
             requestAnimationFrame(animate);
         } else {
+            currentNFC = targetNFC;
 
-            currentNfc = targetNfc;
-
-            CABLES.patch.setVariable("currentNfc", currentNfc);
-            CABLES.patch.setVariable("targetNfc", currentNfc);
-            CABLES.patch.setVariable("nfcFade", 0);
+            CABLES.patch.setVariable("currentNFC", currentNFC);
+            CABLES.patch.setVariable("targetNFC", currentNFC);
+            CABLES.patch.setVariable("fadeNFC", 0);
 
             isTransitioning = false;
 
-            console.log("Transition complete:", currentNfc);
+            console.log("Transition complete:", currentNFC);
 
-            if (queuedNfc !== null && queuedNfc !== currentNfc) {
-                const next = queuedNfc;
-                queuedNfc = null;
-                startNfcTransition(next);
+            if (queuedNFC !== null && queuedNFC !== currentNFC) {
+                const next = queuedNFC;
+                queuedNFC = null;
+                startNFCTransition(next);
             } else {
-                queuedNfc = null;
+                queuedNFC = null;
             }
         }
     }
@@ -161,8 +151,7 @@ function startNfcTransition(number) {
 // FIREBASE WRITE
 // =========================
 
-function sendNfcNumberToFirebase(number) {
-
+function sendNFCNumberToFirebase(number) {
     console.log("Sending nfcNumber to Firebase:", number);
 
     set(nfcRef, number)
@@ -180,7 +169,6 @@ function sendNfcNumberToFirebase(number) {
 // =========================
 
 onValue(nfcRef, (snapshot) => {
-
     const number = snapshot.val();
 
     if (number === null || number === undefined) {
@@ -189,7 +177,7 @@ onValue(nfcRef, (snapshot) => {
 
     console.log("Firebase received nfcNumber:", number);
 
-    setNfcNumber(number);
+    setNFCNumber(number);
 });
 
 
@@ -197,6 +185,8 @@ onValue(nfcRef, (snapshot) => {
 // START BUTTON
 // =========================
 
-document
-    .getElementById("startNFC")
-    .addEventListener("click", startNFC);
+const startButton = document.getElementById("startNFC");
+
+if (startButton) {
+    startButton.addEventListener("click", startNFC);
+}
