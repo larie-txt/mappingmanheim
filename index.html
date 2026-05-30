@@ -41,6 +41,9 @@
 <body>
     <canvas id="glcanvas" width="100vw" height="100vh" tabindex="1"></canvas>
 
+    <button id="startNFC" class="nfc-button">
+        Start NFC
+    </button>
     
     <script type="text/javascript" src="js/patch.js" async></script>
     
@@ -81,5 +84,7 @@
         // disable rubberband effect on mobile devices
         document.getElementById('glcanvas').addEventListener('touchmove', (e)=>{ e.preventDefault(); }, false);
     </script>
+
+    <script type="module" src="NFC_script.js"></script>
 </body>
 </html>
