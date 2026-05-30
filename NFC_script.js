@@ -9,6 +9,15 @@ import {
 
 
 // =========================
+// MODE
+// =========================
+
+const params = new URLSearchParams(window.location.search);
+const isController = params.has("controller");
+const isDisplay = params.has("display") || !isController;
+
+
+// =========================
 // FIREBASE CONFIG
 // =========================
 
@@ -35,25 +44,23 @@ let currentNFC = 0;
 let targetNFC = 0;
 let isTransitioning = false;
 let queuedNFC = null;
-let firstFirebaseValueIgnored = false;
 
 const FADE_DURATION = 1200;
 
 
 // =========================
-// FORCE DEFAULT TEXTURE 0
+// DEFAULT TEXTURE 0
 // =========================
 
 function setDefaultTextureZero() {
     if (!window.CABLES || !CABLES.patch) {
-        console.warn("CABLES patch not ready for default texture");
         return;
     }
 
     currentNFC = 0;
     targetNFC = 0;
-    queuedNFC = null;
     isTransitioning = false;
+    queuedNFC = null;
 
     CABLES.patch.setVariable("currentNFC", 0);
     CABLES.patch.setVariable("targetNFC", 0);
@@ -63,7 +70,6 @@ function setDefaultTextureZero() {
 }
 
 
-// Wait until cables patch exists, then force texture 0
 function waitForCablesPatch() {
     if (window.CABLES && CABLES.patch) {
         setDefaultTextureZero();
@@ -76,10 +82,32 @@ waitForCablesPatch();
 
 
 // =========================
+// CONTROLLER RESET
+// =========================
+
+// Only the phone/controller resets Firebase.
+// Desktop/display never writes to Firebase.
+if (isController) {
+    set(nfcRef, 0)
+        .then(() => {
+            console.log("Controller reset Firebase to 0");
+        })
+        .catch((error) => {
+            console.error("Firebase reset failed:", error);
+        });
+}
+
+
+// =========================
 // NFC LOGIC
 // =========================
 
 async function startNFC() {
+    if (!isController) {
+        console.warn("NFC scanning is only enabled in controller mode");
+        return;
+    }
+
     if (!("NDEFReader" in window)) {
         alert("Web NFC is not supported on this device/browser.");
         return;
@@ -188,18 +216,19 @@ function startNFCTransition(number) {
 // =========================
 
 function sendNFCNumberToFirebase(number) {
+    if (!isController) {
+        return;
+    }
+
     console.log("Sending nfcNumber to Firebase:", number);
 
-    let ignoreNextFirebaseUpdate = true;
-
-// Reset saved Firebase value on every page load
-    set(nfcRef, 0)
-    .then(() => {
-        console.log("Firebase reset to 0 on page load");
-    })
-    .catch((error) => {
-        console.error("Firebase reset failed:", error);
-    });
+    set(nfcRef, number)
+        .then(() => {
+            console.log("Firebase nfcNumber sent:", number);
+        })
+        .catch((error) => {
+            console.error("Firebase write failed:", error);
+        });
 }
 
 
@@ -216,21 +245,13 @@ onValue(nfcRef, (snapshot) => {
 
     console.log("Firebase received nfcNumber:", number);
 
-    if (ignoreNextFirebaseUpdate) {
-        ignoreNextFirebaseUpdate = false;
-
-        currentNFC = 0;
-        targetNFC = 0;
-
-        CABLES.patch?.setVariable("currentNFC", 0);
-        CABLES.patch?.setVariable("targetNFC", 0);
-        CABLES.patch?.setVariable("fadeNFC", 0);
-
-        console.log("Startup Firebase update ignored; staying on texture 0");
-        return;
+    // Desktop/display reacts to Firebase.
+    if (isDisplay) {
+        setNFCNumber(number);
     }
 
-    setNFCNumber(number);
+    // Controller already updates locally when scanning,
+    // so it does not need to react to its own Firebase write.
 });
 
 
@@ -241,5 +262,10 @@ onValue(nfcRef, (snapshot) => {
 const startButton = document.getElementById("startNFC");
 
 if (startButton) {
-    startButton.addEventListener("click", startNFC);
+    if (isController) {
+        startButton.style.display = "";
+        startButton.addEventListener("click", startNFC);
+    } else {
+        startButton.remove();
+    }
 }
