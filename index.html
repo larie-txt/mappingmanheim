@@ -9,13 +9,13 @@
             color: #fff;
             font-family: Helvetica, Arial, sans-serif;
             overflow: hidden; /* disable scrolling / rubberband effect on mobile */
-            height:100vh;
+            height: 100vh;
         }
 
         canvas {
             display: block;
             position: absolute;
-            outline:0;
+            outline: 0;
         }
 
         * {
@@ -28,6 +28,30 @@
             user-select: none;
         }
 
+        .nfc-button {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .nfc-button {
+                display: block;
+                position: fixed;
+                bottom: 24px;
+                left: 50%;
+                transform: translateX(-50%);
+                z-index: 9999;
+
+                padding: 14px 22px;
+                border: none;
+                border-radius: 999px;
+
+                background: #fff;
+                color: #000;
+                font-size: 16px;
+                font-family: Helvetica, Arial, sans-serif;
+                cursor: pointer;
+            }
+        }
     </style>
 
     <meta charset="utf-8">
@@ -36,18 +60,19 @@
     <meta itemprop="description" content="made with cables">
     <meta itemprop="image" content="screenshot.png">
     <meta name="description" content="made with cables"/>
-
 </head>
+
 <body>
     <canvas id="glcanvas" width="100vw" height="100vh" tabindex="1"></canvas>
 
-    
+    <button id="startNFC" class="nfc-button">
+        Start NFC
+    </button>
+
     <script type="text/javascript" src="js/patch.js" async></script>
-    
 
     <script type="text/javascript">
-
-        function showError(initiator,...args)
+        function showError(initiator, ...args)
         {
             CABLES.logErrorConsole("[" + initiator + "]", ...args);
         }
@@ -74,12 +99,16 @@
                 "onError": showError,
                 "onPatchLoaded": patchInitialized,
                 "onFinishedLoading": patchFinishedLoading,
-                "canvas": {"alpha":true, "premultipliedAlpha":true } // make canvas transparent
+                "canvas": {"alpha": true, "premultipliedAlpha": true}
             });
         });
 
         // disable rubberband effect on mobile devices
-        document.getElementById('glcanvas').addEventListener('touchmove', (e)=>{ e.preventDefault(); }, false);
+        document.getElementById('glcanvas').addEventListener('touchmove', (e) => {
+            e.preventDefault();
+        }, false);
     </script>
+
+    <script type="module" src="NFC_script.js"></script>
 </body>
 </html>
