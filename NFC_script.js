@@ -35,8 +35,44 @@ let currentNFC = 0;
 let targetNFC = 0;
 let isTransitioning = false;
 let queuedNFC = null;
+let firstFirebaseValueIgnored = false;
 
 const FADE_DURATION = 1200;
+
+
+// =========================
+// FORCE DEFAULT TEXTURE 0
+// =========================
+
+function setDefaultTextureZero() {
+    if (!window.CABLES || !CABLES.patch) {
+        console.warn("CABLES patch not ready for default texture");
+        return;
+    }
+
+    currentNFC = 0;
+    targetNFC = 0;
+    queuedNFC = null;
+    isTransitioning = false;
+
+    CABLES.patch.setVariable("currentNFC", 0);
+    CABLES.patch.setVariable("targetNFC", 0);
+    CABLES.patch.setVariable("fadeNFC", 0);
+
+    console.log("Default texture set to 0");
+}
+
+
+// Wait until cables patch exists, then force texture 0
+function waitForCablesPatch() {
+    if (window.CABLES && CABLES.patch) {
+        setDefaultTextureZero();
+    } else {
+        requestAnimationFrame(waitForCablesPatch);
+    }
+}
+
+waitForCablesPatch();
 
 
 // =========================
@@ -168,10 +204,7 @@ function sendNFCNumberToFirebase(number) {
 // FIREBASE LISTENER
 // =========================
 
-let firstFirebaseValue = true;
-
 onValue(nfcRef, (snapshot) => {
-
     const number = snapshot.val();
 
     if (number === null || number === undefined) {
@@ -180,25 +213,14 @@ onValue(nfcRef, (snapshot) => {
 
     console.log("Firebase received nfcNumber:", number);
 
-    // First load: initialize directly
-    if (firstFirebaseValue) {
-
-        firstFirebaseValue = false;
-
-        currentNFC = number;
-        targetNFC = number;
-
-        if (window.CABLES && CABLES.patch) {
-            CABLES.patch.setVariable("currentNFC", number);
-            CABLES.patch.setVariable("targetNFC", number);
-            CABLES.patch.setVariable("fadeNFC", 0);
-        }
-
-        console.log("Initial NFC state:", number);
+    // Ignore Firebase's stored startup value.
+    // This keeps the page on texture 0 after loading.
+    if (!firstFirebaseValueIgnored) {
+        firstFirebaseValueIgnored = true;
+        console.log("Initial Firebase value ignored. Staying on texture 0.");
         return;
     }
 
-    // Later updates fade normally
     setNFCNumber(number);
 });
 
