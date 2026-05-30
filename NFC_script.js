@@ -239,19 +239,31 @@ function sendNFCNumberToFirebase(number) {
 onValue(nfcRef, (snapshot) => {
     const number = snapshot.val();
 
+    console.log("Firebase snapshot received:", number);
+    console.log("Mode:", { isController, isDisplay });
+
     if (number === null || number === undefined) {
         return;
     }
 
-    console.log("Firebase received nfcNumber:", number);
-
-    // Desktop/display reacts to Firebase.
-    if (isDisplay) {
-        setNFCNumber(number);
+    if (!Number.isFinite(Number(number))) {
+        console.warn("Firebase value is not a valid number:", number);
+        return;
     }
 
-    // Controller already updates locally when scanning,
-    // so it does not need to react to its own Firebase write.
+    const parsedNumber = Number(number);
+
+    // Display/desktop should always react to Firebase changes
+    if (isDisplay) {
+        console.log("Display received NFC:", parsedNumber);
+        setNFCNumber(parsedNumber);
+        return;
+    }
+
+    // Controller/phone does not react to its own Firebase write
+    if (isController) {
+        console.log("Controller received Firebase value but will not replay it:", parsedNumber);
+    }
 });
 
 
