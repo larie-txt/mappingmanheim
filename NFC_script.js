@@ -190,13 +190,16 @@ function startNFCTransition(number) {
 function sendNFCNumberToFirebase(number) {
     console.log("Sending nfcNumber to Firebase:", number);
 
-    set(nfcRef, number)
-        .then(() => {
-            console.log("Firebase nfcNumber sent:", number);
-        })
-        .catch((error) => {
-            console.error("Firebase write failed:", error);
-        });
+    let ignoreNextFirebaseUpdate = true;
+
+// Reset saved Firebase value on every page load
+    set(nfcRef, 0)
+    .then(() => {
+        console.log("Firebase reset to 0 on page load");
+    })
+    .catch((error) => {
+        console.error("Firebase reset failed:", error);
+    });
 }
 
 
@@ -213,11 +216,17 @@ onValue(nfcRef, (snapshot) => {
 
     console.log("Firebase received nfcNumber:", number);
 
-    // Ignore Firebase's stored startup value.
-    // This keeps the page on texture 0 after loading.
-    if (!firstFirebaseValueIgnored) {
-        firstFirebaseValueIgnored = true;
-        console.log("Initial Firebase value ignored. Staying on texture 0.");
+    if (ignoreNextFirebaseUpdate) {
+        ignoreNextFirebaseUpdate = false;
+
+        currentNFC = 0;
+        targetNFC = 0;
+
+        CABLES.patch?.setVariable("currentNFC", 0);
+        CABLES.patch?.setVariable("targetNFC", 0);
+        CABLES.patch?.setVariable("fadeNFC", 0);
+
+        console.log("Startup Firebase update ignored; staying on texture 0");
         return;
     }
 
