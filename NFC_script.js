@@ -45,7 +45,7 @@ let targetNFC = 0;
 let isTransitioning = false;
 let queuedNFC = null;
 
-const FADE_DURATION = 1200;
+const FADE_DURATION = 2400;
 
 
 // =========================
