@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <title>Fading Manheim</title>
 
@@ -34,7 +33,7 @@
             display: none;
         }
 
-        /* Show only on mobile/tablet */
+        /* only show on phone/tablet */
         @media (max-width: 768px) {
             .nfc-button {
                 display: block;
@@ -51,7 +50,7 @@
                 border: none;
                 border-radius: 999px;
 
-                background: rgba(255, 255, 255, 0.9);
+                background: rgba(255,255,255,0.9);
                 color: #000;
 
                 font-size: 16px;
@@ -75,7 +74,7 @@
 
     <meta
         name="description"
-        content="made with cables" />
+        content="made with cables"/>
 </head>
 
 <body>
@@ -86,16 +85,16 @@
         height="100vh"
         tabindex="1"></canvas>
 
-    <!-- NFC Start Button -->
+    <!-- NFC button -->
     <button id="startNFC" class="nfc-button">
         Start NFC
     </button>
 
-    <!-- Cables Export -->
+    <!-- Cables export -->
     <script
         type="text/javascript"
         src="js/patch.js"
-        ></script>
+        async></script>
 
     <script type="text/javascript">
 
@@ -126,7 +125,6 @@
                 onError: showError,
                 onPatchLoaded: patchInitialized,
                 onFinishedLoading: patchFinishedLoading,
-
                 canvas: {
                     alpha: true,
                     premultipliedAlpha: true
@@ -135,7 +133,6 @@
         });
 
         // disable rubber-band scrolling on mobile
-
         document
             .getElementById("glcanvas")
             .addEventListener(
@@ -151,8 +148,7 @@
     <!-- NFC Script -->
     <script
         type="module"
-        src="NFC_script.js"></script>
+        src="js/NFC_script.js"></script>
 
 </body>
-
 </html>
